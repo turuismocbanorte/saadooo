@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0f172a">
     <title>Gestión de Equipo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -103,6 +104,10 @@
             background: #22c55e;
             color: white;
         }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
         .btn-sm {
             padding: 6px 12px;
             font-size: 12px;
@@ -110,7 +115,7 @@
         .btn-full {
             width: 100%;
         }
-        .select, .input-text, .textarea {
+        .select, .input-text, .textarea, .date-input {
             width: 100%;
             padding: 10px 14px;
             border-radius: 10px;
@@ -238,7 +243,7 @@
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 12px;
         }
         .stat-card {
@@ -293,6 +298,18 @@
             margin-bottom: 16px;
             cursor: pointer;
         }
+        .fecha-editor {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .fecha-editor .date-input {
+            flex: 2;
+        }
+        .fecha-editor button {
+            flex: 1;
+        }
         @media (max-width: 600px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .operario-row { flex-direction: column; gap: 8px; }
@@ -303,15 +320,15 @@
 <body>
     <div class="container">
         <div id="bannerInstalacion" class="banner-instalacion" style="display: none;">
-            📲 Instalar esta app en tu celular
+            Instalar esta app en tu celular
         </div>
         <div class="header">
             <h1>Gestión de Equipo</h1>
             <p>Control de asistencia y seguimiento de actividades</p>
             <div class="header-stats">
                 <div class="header-stat">
-                    <div class="header-stat-label">Fecha</div>
-                    <div class="header-stat-value" id="fechaActual"></div>
+                    <div class="header-stat-label">Fecha seleccionada</div>
+                    <div class="header-stat-value" id="fechaSeleccionada"></div>
                 </div>
                 <div class="header-stat">
                     <div class="header-stat-label">Próximo sábado</div>
@@ -319,19 +336,27 @@
                 </div>
             </div>
         </div>
+
         <div class="card">
             <div class="card-header">
                 <span class="card-title">Configuración</span>
-                <button id="btnPDF" class="btn btn-secondary btn-sm">Exportar PDF</button>
+                <button id="btnPDF" class="btn btn-primary btn-sm">Generar PDF</button>
             </div>
             <div class="card-body">
-                <select id="tipoJornada" class="select">
-                    <option value="todos">Todos los sábados</option>
-                    <option value="intercalado">Sábado de por medio</option>
-                </select>
+                <div class="fecha-editor">
+                    <input type="date" id="selectorFecha" class="date-input">
+                    <button id="btnCambiarFecha" class="btn btn-secondary">Cambiar fecha</button>
+                </div>
+                <div style="margin-top: 15px;">
+                    <select id="tipoJornada" class="select">
+                        <option value="todos">Todos los sábados</option>
+                        <option value="intercalado">Sábado de por medio</option>
+                    </select>
+                </div>
                 <div id="estadoSabado" class="alert alert-info" style="margin-top: 14px; margin-bottom: 0;"></div>
             </div>
         </div>
+
         <div class="card">
             <div class="card-header">
                 <span class="card-title">Equipo de trabajo</span>
@@ -342,6 +367,7 @@
                 <button id="btnGuardarOperarios" class="btn btn-secondary btn-full" style="margin-top: 12px;">Guardar equipo</button>
             </div>
         </div>
+
         <div class="card">
             <div class="card-header">
                 <span class="card-title">Registro de asistencia</span>
@@ -349,8 +375,10 @@
             <div class="card-body">
                 <div id="listaAsistencia"></div>
                 <button id="btnGuardarAsistencia" class="btn btn-primary btn-full" style="margin-top: 16px;">Registrar asistencia</button>
+                <button id="btnCargarFecha" class="btn btn-secondary btn-full" style="margin-top: 8px;">Cargar datos de fecha</button>
             </div>
         </div>
+
         <div class="card">
             <div class="card-header">
                 <span class="card-title">Actividades asignadas</span>
@@ -360,6 +388,7 @@
                 <button id="btnGuardarActividades" class="btn btn-secondary btn-full" style="margin-top: 16px;">Guardar cambios</button>
             </div>
         </div>
+
         <div class="card">
             <div class="card-header">
                 <span class="card-title">Notas generales</span>
@@ -369,6 +398,7 @@
                 <button id="btnGuardarNotas" class="btn btn-secondary btn-sm" style="margin-top: 10px;">Guardar notas</button>
             </div>
         </div>
+
         <div class="card">
             <div class="card-header">
                 <span class="card-title">Resumen</span>
@@ -379,17 +409,22 @@
         </div>
     </div>
     <button id="fab" class="fab">+</button>
+
     <script>
         let operarios = [];
         let tipoJornada = 'todos';
+        let fechaActual = new Date().toISOString().split('T')[0];
         let deferredPrompt = null;
+
         const estadosActividad = {
             pendiente: { label: 'Pendiente', class: 'estado-pendiente' },
             en_progreso: { label: 'En progreso', class: 'estado-enprogreso' },
             completada: { label: 'Completada', class: 'estado-completada' },
             cancelada: { label: 'Cancelada', class: 'estado-cancelada' }
         };
+
         function escapeHtml(t) { if (!t) return ''; return t.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+        
         function mostrarMensaje(texto, tipo) {
             let div = document.createElement('div');
             div.className = `alert alert-${tipo}`;
@@ -404,11 +439,69 @@
             document.body.appendChild(div);
             setTimeout(() => div.remove(), 2500);
         }
-        function guardarOperarios() { localStorage.setItem('operarios', JSON.stringify(operarios)); }
-        function cargarDatos() {
-            let guardados = localStorage.getItem('operarios');
-            if (guardados) { 
-                operarios = JSON.parse(guardados);
+
+        function guardarOperarios() { 
+            localStorage.setItem('operarios', JSON.stringify(operarios)); 
+        }
+        
+        function guardarDatosPorFecha() {
+            let datosFecha = {
+                fecha: fechaActual,
+                operarios: operarios.map(o => ({
+                    id: o.id,
+                    nombre: o.nombre,
+                    actividad: o.actividad,
+                    presente: o.presente,
+                    estadoActividad: o.estadoActividad,
+                    observacionesActividad: o.observacionesActividad
+                })),
+                notas: document.getElementById('notas').value
+            };
+            localStorage.setItem(`datos_${fechaActual}`, JSON.stringify(datosFecha));
+        }
+
+        function cargarDatosPorFecha() {
+            let datosGuardados = localStorage.getItem(`datos_${fechaActual}`);
+            if (datosGuardados) {
+                let datos = JSON.parse(datosGuardados);
+                if (datos.operarios) {
+                    datos.operarios.forEach(opGuardado => {
+                        let operarioExistente = operarios.find(o => o.id === opGuardado.id);
+                        if (operarioExistente) {
+                            operarioExistente.presente = opGuardado.presente || false;
+                            operarioExistente.estadoActividad = opGuardado.estadoActividad || 'pendiente';
+                            operarioExistente.observacionesActividad = opGuardado.observacionesActividad || '';
+                        }
+                    });
+                }
+                if (datos.notas) {
+                    document.getElementById('notas').value = datos.notas;
+                }
+                guardarOperarios();
+                mostrarAsistencia();
+                mostrarActividades();
+                mostrarResumen();
+                mostrarMensaje(`Datos cargados para ${fechaActual}`, 'success');
+            } else {
+                // Resetear asistencias para fecha nueva
+                operarios.forEach(o => {
+                    o.presente = false;
+                    o.estadoActividad = 'pendiente';
+                    o.observacionesActividad = '';
+                });
+                document.getElementById('notas').value = '';
+                guardarOperarios();
+                mostrarAsistencia();
+                mostrarActividades();
+                mostrarResumen();
+                mostrarMensaje(`Fecha nueva: ${fechaActual}`, 'info');
+            }
+        }
+
+        function cargarDatosIniciales() {
+            let operariosGuardados = localStorage.getItem('operarios');
+            if (operariosGuardados) { 
+                operarios = JSON.parse(operariosGuardados);
                 operarios.forEach(op => {
                     if (!op.estadoActividad) op.estadoActividad = 'pendiente';
                     if (!op.observacionesActividad) op.observacionesActividad = '';
@@ -423,41 +516,62 @@
                 ];
                 guardarOperarios();
             }
+            
             let config = localStorage.getItem('tipoJornada');
             if (config) { tipoJornada = config; document.getElementById('tipoJornada').value = tipoJornada; }
-            let hoy = new Date();
-            document.getElementById('fechaActual').textContent = hoy.toLocaleDateString('es-ES', { day:'numeric', month:'long' });
-            let prox = new Date(hoy);
-            prox.setDate(hoy.getDate() + ((6 - hoy.getDay() + 7) % 7));
-            document.getElementById('proximoSabado').textContent = prox.toLocaleDateString('es-ES', { day:'numeric', month:'long' });
+            
+            document.getElementById('selectorFecha').value = fechaActual;
+            actualizarFechaMostrada();
             actualizarEstado();
             mostrarOperarios();
-            mostrarAsistencia();
-            mostrarActividades();
-            mostrarResumen();
-            cargarNotas();
+            cargarDatosPorFecha();
         }
+        
+        function actualizarFechaMostrada() {
+            let fechaObj = new Date(fechaActual);
+            document.getElementById('fechaSeleccionada').textContent = fechaObj.toLocaleDateString('es-ES', { day:'numeric', month:'long', year:'numeric' });
+            let prox = new Date(fechaActual);
+            prox.setDate(prox.getDate() + ((6 - prox.getDay() + 7) % 7));
+            document.getElementById('proximoSabado').textContent = prox.toLocaleDateString('es-ES', { day:'numeric', month:'long' });
+        }
+        
+        function cambiarFecha() {
+            let nuevaFecha = document.getElementById('selectorFecha').value;
+            if (nuevaFecha) {
+                // Guardar datos actuales antes de cambiar
+                guardarDatosPorFecha();
+                fechaActual = nuevaFecha;
+                actualizarFechaMostrada();
+                cargarDatosPorFecha();
+                actualizarEstado();
+            }
+        }
+        
         function esSabadoTrabajo() {
-            let hoy = new Date();
-            if (hoy.getDay() !== 6) return false;
+            let fechaObj = new Date(fechaActual);
+            if (fechaObj.getDay() !== 6) return false;
             if (tipoJornada === 'todos') return true;
             if (tipoJornada === 'intercalado') {
-                let inicio = new Date(hoy.getFullYear(), 0, 1);
-                let semana = Math.floor((hoy - inicio) / (7*24*60*60*1000));
+                let inicio = new Date(fechaObj.getFullYear(), 0, 1);
+                let semana = Math.floor((fechaObj - inicio) / (7*24*60*60*1000));
                 return semana % 2 === 0;
             }
             return true;
         }
+        
         function actualizarEstado() {
             let div = document.getElementById('estadoSabado');
+            let fechaObj = new Date(fechaActual);
+            let diaSemana = fechaObj.toLocaleDateString('es-ES', { weekday: 'long' });
             if (esSabadoTrabajo()) {
                 div.className = 'alert alert-success';
-                div.innerHTML = '<strong>Jornada activa</strong><br>Hoy es sábado de trabajo. Registre asistencia.';
+                div.innerHTML = `<strong>Jornada activa</strong><br>${diaSemana} ${fechaActual} - Es sábado de trabajo. Registre asistencia.`;
             } else {
                 div.className = 'alert alert-warning';
-                div.innerHTML = '<strong>Sin jornada</strong><br>Hoy no es sábado de trabajo.';
+                div.innerHTML = `<strong>Sin jornada</strong><br>${diaSemana} ${fechaActual} - No es sábado de trabajo.`;
             }
         }
+        
         function mostrarOperarios() {
             let container = document.getElementById('listaOperarios');
             container.innerHTML = '';
@@ -482,6 +596,7 @@
                 `;
                 container.appendChild(card);
             });
+            
             document.querySelectorAll('.btn-editar').forEach(btn => {
                 btn.addEventListener('click', () => {
                     let id = parseInt(btn.dataset.id);
@@ -503,6 +618,7 @@
                     }
                 });
             });
+            
             document.querySelectorAll('.btn-eliminar').forEach(btn => {
                 btn.addEventListener('click', () => {
                     let id = parseInt(btn.dataset.id);
@@ -518,6 +634,7 @@
                 });
             });
         }
+        
         function mostrarAsistencia() {
             let container = document.getElementById('listaAsistencia');
             container.innerHTML = '';
@@ -540,6 +657,7 @@
                 });
             });
         }
+        
         function mostrarActividades() {
             let container = document.getElementById('listaActividades');
             container.innerHTML = '';
@@ -567,6 +685,7 @@
                 `;
                 container.appendChild(card);
             });
+            
             operarios.forEach(op => {
                 document.querySelectorAll(`.estado-badge[data-id="${op.id}"]`).forEach(badge => {
                     badge.addEventListener('click', () => {
@@ -579,6 +698,7 @@
                     });
                 });
             });
+            
             document.querySelectorAll('.btn-guardar-obs').forEach(btn => {
                 btn.addEventListener('click', () => {
                     let id = parseInt(btn.dataset.id);
@@ -592,6 +712,7 @@
                 });
             });
         }
+        
         function mostrarResumen() {
             let presentes = operarios.filter(o => o.presente).length;
             let completadas = operarios.filter(o => o.estadoActividad === 'completada').length;
@@ -603,24 +724,17 @@
                 <div class="stat-card"><div class="stat-number">${operarios.length}</div><div class="stat-label">Total</div></div>
             `;
         }
+        
         function guardarAsistenciaManual() {
-            if (!esSabadoTrabajo()) { mostrarMensaje('Hoy no es sábado de trabajo', 'warning'); return; }
-            let fecha = new Date().toISOString().split('T')[0];
-            localStorage.setItem(`asistencia_${fecha}`, JSON.stringify({ fecha, operarios: operarios.map(o => ({...o})) }));
-            mostrarMensaje(`Asistencia registrada`, 'success');
+            guardarDatosPorFecha();
+            mostrarMensaje(`Asistencia guardada para ${fechaActual}`, 'success');
         }
+        
         function guardarNotas() {
-            let notas = document.getElementById('notas').value;
-            let fecha = new Date().toISOString().split('T')[0];
-            let data = localStorage.getItem(`asistencia_${fecha}`);
-            if (data) { data = JSON.parse(data); data.notas = notas; localStorage.setItem(`asistencia_${fecha}`, JSON.stringify(data)); }
+            guardarDatosPorFecha();
             mostrarMensaje('Notas guardadas', 'success');
         }
-        function cargarNotas() {
-            let fecha = new Date().toISOString().split('T')[0];
-            let data = localStorage.getItem(`asistencia_${fecha}`);
-            if (data && JSON.parse(data).notas) document.getElementById('notas').value = JSON.parse(data).notas;
-        }
+        
         function agregarOperario() {
             let nuevoId = operarios.length ? Math.max(...operarios.map(o=>o.id)) + 1 : 1;
             operarios.push({ id: nuevoId, nombre: 'Nuevo operario', actividad: 'Asignar actividad', presente: false, estadoActividad: 'pendiente', observacionesActividad: '' });
@@ -631,46 +745,81 @@
             mostrarResumen();
             mostrarMensaje('Operario agregado', 'success');
         }
+        
         function cambiarJornada() {
             tipoJornada = document.getElementById('tipoJornada').value;
             localStorage.setItem('tipoJornada', tipoJornada);
-            operarios.forEach(o => o.presente = false);
-            guardarOperarios();
             actualizarEstado();
-            mostrarAsistencia();
-            mostrarActividades();
-            mostrarResumen();
             mostrarMensaje('Configuración actualizada', 'success');
         }
-        function generarPDF() {
-            let fecha = new Date().toLocaleDateString('es-ES');
-            let contenido = `
-                <div style="padding: 30px; font-family: Arial;">
-                    <h1>Informe de Gestión de Equipo</h1>
-                    <p>Fecha: ${fecha}</p>
+        
+        async function generarPDF() {
+            let fechaObj = new Date(fechaActual);
+            let fechaTexto = fechaObj.toLocaleDateString('es-ES');
+            
+            let contenido = document.createElement('div');
+            contenido.style.padding = '30px';
+            contenido.style.fontFamily = 'Arial, sans-serif';
+            contenido.innerHTML = `
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #0f172a;">Informe de Gestión de Equipo</h1>
+                    <p style="color: #64748b;">Fecha: ${fechaTexto}</p>
                     <hr>
-                    <h2>Resumen</h2>
-                    <p>Presentes: ${operarios.filter(o=>o.presente).length}</p>
-                    <p>Completadas: ${operarios.filter(o=>o.estadoActividad === 'completada').length}</p>
-                    <h2>Detalle</h2>
+                </div>
+                <div style="margin-bottom: 30px;">
+                    <h2>Resumen general</h2>
+                    <table border="1" cellpadding="8" style="width:100%; border-collapse:collapse;">
+                        <tr style="background:#f0f0f0;"><th>Métrica</th><th>Valor</th></tr>
+                        <tr><td>Presentes</td><td>${operarios.filter(o=>o.presente).length}</td></tr>
+                        <tr><td>Actividades completadas</td><td>${operarios.filter(o=>o.estadoActividad === 'completada').length}</td></tr>
+                        <tr><td>Actividades en progreso</td><td>${operarios.filter(o=>o.estadoActividad === 'en_progreso').length}</td></tr>
+                        <tr><td>Total equipo</td><td>${operarios.length}</td></tr>
+                    </table>
+                </div>
+                <div>
+                    <h2>Detalle de actividades</h2>
                     ${operarios.map(op => `
-                        <div style="margin-bottom: 20px; padding: 10px; border:1px solid #ddd;">
-                            <h3>${escapeHtml(op.nombre)}</h3>
+                        <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 10px;">
+                            <h3 style="margin:0 0 10px 0; color:#3b82f6;">${escapeHtml(op.nombre)}</h3>
                             <p><strong>Actividad:</strong> ${escapeHtml(op.actividad)}</p>
                             <p><strong>Estado:</strong> ${estadosActividad[op.estadoActividad]?.label || 'Pendiente'}</p>
                             <p><strong>Asistencia:</strong> ${op.presente ? 'Presente' : 'Ausente'}</p>
-                            ${op.observacionesActividad ? `<p><strong>Observaciones:</strong> ${escapeHtml(op.observacionesActividad)}</p>` : ''}
+                            ${op.observacionesActividad ? `<p><strong>Observaciones:</strong><br>${escapeHtml(op.observacionesActividad)}</p>` : ''}
                         </div>
                     `).join('')}
                 </div>
+                <div>
+                    <h2>Notas generales</h2>
+                    <p style="padding: 15px; background: #f8fafc; border-radius: 10px;">${escapeHtml(document.getElementById('notas').value) || 'Sin notas'}</p>
+                </div>
+                <div style="margin-top: 30px; text-align: center; font-size: 11px; color: #94a3b8;">
+                    <hr>
+                    <p>Documento generado por Sistema de Gestión de Equipo</p>
+                </div>
             `;
-            let win = window.open(); win.document.write(contenido); win.print(); win.close();
+            
+            let opt = {
+                margin: [0.5, 0.5, 0.5, 0.5],
+                filename: `informe_equipo_${fechaActual}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            
+            try {
+                await html2pdf().set(opt).from(contenido).save();
+                mostrarMensaje('PDF generado correctamente', 'success');
+            } catch (error) {
+                mostrarMensaje('Error al generar PDF. Intente de nuevo.', 'warning');
+            }
         }
+        
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
             document.getElementById('bannerInstalacion').style.display = 'block';
         });
+        
         document.getElementById('bannerInstalacion').addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
@@ -679,16 +828,19 @@
                 deferredPrompt = null;
             }
         });
+        
         document.addEventListener('DOMContentLoaded', () => {
-            cargarDatos();
+            cargarDatosIniciales();
             document.getElementById('btnAgregar').addEventListener('click', agregarOperario);
             document.getElementById('fab').addEventListener('click', agregarOperario);
             document.getElementById('btnGuardarOperarios').addEventListener('click', () => { guardarOperarios(); mostrarMensaje('Cambios guardados', 'success'); });
             document.getElementById('btnGuardarAsistencia').addEventListener('click', guardarAsistenciaManual);
+            document.getElementById('btnCargarFecha').addEventListener('click', () => cargarDatosPorFecha());
             document.getElementById('btnGuardarNotas').addEventListener('click', guardarNotas);
-            document.getElementById('btnGuardarActividades').addEventListener('click', () => { guardarOperarios(); mostrarMensaje('Actividades guardadas', 'success'); });
+            document.getElementById('btnGuardarActividades').addEventListener('click', () => { guardarDatosPorFecha(); mostrarMensaje('Actividades guardadas', 'success'); });
             document.getElementById('btnPDF').addEventListener('click', generarPDF);
             document.getElementById('tipoJornada').addEventListener('change', cambiarJornada);
+            document.getElementById('btnCambiarFecha').addEventListener('click', cambiarFecha);
         });
     </script>
 </body>
