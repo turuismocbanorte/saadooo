@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GestionEquipo">
+    
+    <link rel="manifest" href="data:application/manifest+json,{
+        \"name\": \"Gestion Equipo Sabados\",
+        \"short_name\": \"GestionEq\",
+        \"start_url\": \"./\",
+        \"display\": \"standalone\",
+        \"theme_color\": \"#0f172a\",
+        \"background_color\": \"#f1f5f9\",
+        \"icons\": [{
+            \"src\": \"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230f172a'/%3E%3Ctext x='50' y='67' font-size='50' text-anchor='middle' fill='white' font-family='Arial'%3E📋%3C/text%3E%3C/svg%3E\",
+            \"sizes\": \"any\",
+            \"type\": \"image/svg+xml\"
+        }]
+    }">
+    
+    <title>Gestión de Equipo - Sábados</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f1f5f9;
+            min-height: 100vh;
+            padding: 20px 16px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-bottom: 16px;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .header-stat-label {
+            font-size: 11px;
+            opacity: 0.7;
+            text-transform: uppercase;
+        }
+
+        .header-stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e9eef3;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .card-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .card-body {
+            padding: 16px 20px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-success {
+            background: #22c55e;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .select, .input-text, .textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+        }
+
+        .input-text:disabled {
+            background: #f8fafc;
+            color: #475569;
+        }
+
+        .textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .operario-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            border: 1px solid #e9eef3;
+        }
+
+        .operario-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .operario-field {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .operario-field label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .operario-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .actividad-card {
+            background: white;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 14px;
+            border: 1px solid #e9eef3;
+        }
+
+        .actividad-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9eef3;
+        }
+
+        .actividad-nombre {
+            font-size: 16px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .actividad-estado {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .estado-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .estado-pendiente { background: #fef3c7; color: #92400e; }
+        .estado-enprogreso { background: #e0f2fe; color: #0369a1; }
+        .estado-completada { background: #dcfce7; color: #166534; }
+        .estado-cancelada { background: #fee2e2; color: #991b1b; }
+
+        .actividad-descripcion {
+            font-size: 13px;
+            color: #475569;
+            margin-bottom: 12px;
+        }
+
+        .actividad-observaciones {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 8px;
+        }
+
+        .actividad-observaciones label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .actividad-observaciones textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 12px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 50px;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e9eef3;
+        }
+
+        .checkbox-wrapper input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        .alert-success { background: #dcfce7; color: #166534; border-left: 3px solid #22c55e; }
+        .alert-warning { background: #fef3c7; color: #92400e; border-left: 3px solid #f59e0b; }
+        .alert-info { background: #e0f2fe; color: #0369a1; border-left: 3px solid #0ea5e9; }
+
+        .fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #3b82f6;
+            color: white;
+            width: 52px;
+            height: 52px;
+            border-radius: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+            border: none;
+            z-index: 100;
+        }
+
+        .banner-instalacion {
+            background: #3b82f6;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .operario-row { flex-direction: column; gap: 8px; }
+            .actividad-header { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="bannerInstalacion" class="banner-instalacion" style="display: none;">
+            Instalar como app nativa - Toca aqui
+        </div>
+
+        <div class="header">
+            <h1>Gestión de Equipo</h1>
+            <p>Control de asistencia y seguimiento de actividades - Sábados</p>
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">Fecha</div>
+                    <div class="header-stat-value" id="fechaActual"></div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Próximo sábado</div>
+                    <div class="header-stat-value" id="proximoSabado"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Configuración</span>
+                <button id="btnPDF" class="btn btn-secondary btn-sm">Exportar PDF</button>
+            </div>
+            <div class="card-body">
+                <select id="tipoJornada" class="select">
+                    <option value="todos">Todos los sábados</option>
+                    <option value="intercalado">Sábado de por medio</option>
+                </select>
+                <div id="estadoSabado" class="alert alert-info" style="margin-top: 14px; margin-bottom: 0;"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Equipo de trabajo</span>
+                <button id="btnAgregar" class="btn btn-primary btn-sm">Agregar</button>
+            </div>
+            <div class="card-body">
+                <div id="listaOperarios"></div>
+                <button id="btnGuardarOperarios" class="btn btn-secondary btn-full" style="margin-top: 12px;">Guardar equipo</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Registro de asistencia</span>
+            </div>
+            <div class="card-body">
+                <div id="listaAsistencia"></div>
+                <button id="btnGuardarAsistencia" class="btn btn-primary btn-full" style="margin-top: 16px;">Registrar asistencia</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Actividades asignadas</span>
+            </div>
+            <div class="card-body">
+                <div id="listaActividades"></div>
+                <button id="btnGuardarActividades" class="btn btn-secondary btn-full" style="margin-top: 16px;">Guardar cambios</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Notas generales</span>
+            </div>
+            <div class="card-body">
+                <textarea id="notas" class="textarea" placeholder="Registrar novedades generales..."></textarea>
+                <button id="btnGuardarNotas" class="btn btn-secondary btn-sm" style="margin-top: 10px;">Guardar notas</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Resumen</span>
+            </div>
+            <div class="card-body">
+                <div id="resumen" class="stats-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <button id="fab" class="fab">+</button>
+
+    <script>
+        let operarios = [];
+        let tipoJornada = 'todos';
+        let deferredPrompt = null;
+
+        const estadosActividad = {
+            pendiente: { label: 'Pendiente', class: 'estado-pendiente' },
+            en_progreso: { label: 'En progreso', class: 'estado-enprogreso' },
+            completada: { label: 'Completada', class: 'estado-completada' },
+            cancelada: { label: 'Cancelada', class: 'estado-cancelada' }
+        };
+
+        function escapeHtml(t) { if (!t) return ''; return t.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+        
+        function mostrarMensaje(texto, tipo) {
+            let div = document.createElement('div');
+            div.className = `alert alert-${tipo}`;
+            div.textContent = texto;
+            div.style.position = 'fixed';
+            div.style.top = '70px';
+            div.style.left = '50%';
+            div.style.transform = 'translateX(-50%)';
+            div.style.zIndex = '1000';
+            div.style.minWidth = '200px';
+            div.style.textAlign = 'center';
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 2500);
+        }
+
+        function guardarOperarios() { localStorage.setItem('operarios', JSON.stringify(operarios)); }
+        
+        function cargarDatos() {
+            let guardados = localStorage.getItem('operarios');
+            if (guardados) { 
+                operarios = JSON.parse(guardados);
+                operarios.forEach(op => {
+                    if (!op.estadoActividad) op.estadoActividad = 'pendiente';
+                    if (!op.observacionesActividad) op.observacionesActividad = '';
+                });
+                guardarOperarios();
+            } else {
+                operarios = [
+                    { id: 1, nombre: 'Juan Pérez', actividad: 'Apertura del local', presente: false, estadoActividad: 'pendiente', observacionesActividad: '' },
+                    { id: 2, nombre: 'María García', actividad: 'Preparación de materiales', presente: false, estadoActividad: 'pendiente', observacionesActividad: '' },
+                    { id: 3, nombre: 'Carlos López', actividad: 'Coordinación de equipo', presente: false, estadoActividad: 'pendiente', observacionesActividad: '' },
+                    { id: 4, nombre: 'Ana Martínez', actividad: 'Limpieza y organización', presente: false, estadoActividad: 'pendiente', observacionesActividad: '' }
+                ];
+                guardarOperarios();
+            }
+            
+            let config = localStorage.getItem('tipoJornada');
+            if (config) { tipoJornada = config; document.getElementById('tipoJornada').value = tipoJornada; }
+            
+            let hoy = new Date();
+            document.getElementById('fechaActual').textContent = hoy.toLocaleDateString('es-ES', { day:'numeric', month:'long' });
+            let prox = new Date(hoy);
+            prox.setDate(hoy.getDate() + ((6 - hoy.getDay() + 7) % 7));
+            document.getElementById('proximoSabado').textContent = prox.toLocaleDateString('es-ES', { day:'numeric', month:'long' });
+            
+            actualizarEstado();
+            mostrarOperarios();
+            mostrarAsistencia();
+            mostrarActividades();
+            mostrarResumen();
+            cargarNotas();
+        }
+        
+        function esSabadoTrabajo() {
+            let hoy = new Date();
+            if (hoy.getDay() !== 6) return false;
+            if (tipoJornada === 'todos') return true;
+            if (tipoJornada === 'intercalado') {
+                let inicio = new Date(hoy.getFullYear(), 0, 1);
+                let semana = Math.floor((hoy - inicio) / (7*24*60*60*1000));
+                return semana % 2 === 0;
+            }
+            return true;
+        }
+        
+        function actualizarEstado() {
+            let div = document.getElementById('estadoSabado');
+            if (esSabadoTrabajo()) {
+                div.className = 'alert alert-success';
+                div.innerHTML = '<strong>Jornada activa</strong><br>Hoy es sábado de trabajo.';
+            } else {
+                div.className = 'alert alert-warning';
+                div.innerHTML = '<strong>Sin jornada</strong><br>Hoy no es sábado de trabajo.';
+            }
+        }
+        
+        function mostrarOperarios() {
+            let container = document.getElementById('listaOperarios');
+            container.innerHTML = '';
+            operarios.forEach(op => {
+                let card = document.createElement('div');
+                card.className = 'operario-card';
+                card.innerHTML = `
+                    <div class="operario-row">
+                        <div class="operario-field">
+                            <label>Nombre</label>
+                            <input type="text" id="nombre_${op.id}" class="input-text" value="${escapeHtml(op.nombre)}" disabled>
+                        </div>
+                        <div class="operario-field">
+                            <label>Actividad</label>
+                            <input type="text" id="actividad_${op.id}" class="input-text" value="${escapeHtml(op.actividad)}" disabled>
+                        </div>
+                    </div>
+                    <div class="operario-actions">
+                        <button class="btn-editar btn btn-secondary btn-sm" data-id="${op.id}">Editar</button>
+                        <button class="btn-eliminar btn btn-danger btn-sm" data-id="${op.id}">Eliminar</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            
+            document.querySelectorAll('.btn-editar').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    let id = parseInt(btn.dataset.id);
+                    let nom = document.getElementById(`nombre_${id}`);
+                    let act = document.getElementById(`actividad_${id}`);
+                    if (nom.disabled) {
+                        nom.disabled = false;
+                        act.disabled = false;
+                        btn.textContent = 'Guardar';
+                        btn.classList.remove('btn-secondary');
+                        btn.classList.add('btn-success');
+                    } else {
+                        let op = operarios.find(o => o.id === id);
+                        if (op) { 
+                            op.nombre = nom.value; 
+                            op.actividad = act.value; 
+                            guardarOperarios(); 
+                            mostrarActividades();
+                        }
+                        nom.disabled = true;
+                        act.disabled = true;
+                
